@@ -1,5 +1,4 @@
 
-import base64
 import json
 import os
 from io import BytesIO
@@ -8,69 +7,49 @@ import streamlit as st
 from PIL import Image
 from google import genai
 from google.genai import types
+from pydantic import BaseModel, Field
+from typing import Literal
 
-st.set_page_config(
-    page_title="WasteWise AI",
-    page_icon="♻️",
-    layout="centered",
-)
+st.set_page_config(page_title="WasteWise AI", page_icon="♻️", layout="centered")
 
 CATEGORIES = [
     "Plastic", "Paper", "Glass", "Metal", "Organic",
     "E-Waste", "Hazardous", "Textile", "Other"
 ]
 
+WasteCategory = Literal[
+    "Plastic", "Paper", "Glass", "Metal", "Organic",
+    "E-Waste", "Hazardous", "Textile", "Other"
+]
+
+class WasteResult(BaseModel):
+    category: WasteCategory = Field(description="Exactly one allowed waste category.")
+    item: str = Field(description="Short name of the single visible waste item.")
+    description: str = Field(description="Concise description based only on visible evidence.")
+    disposal: str = Field(description="Practical and safe disposal guidance.")
+    tip: str = Field(description="Exactly one useful environmental or recycling tip.")
+    confidence: float = Field(ge=0, le=1, description="Confidence score from 0 to 1.")
+
 SYSTEM_PROMPT = """
 You are WasteWise AI, an intelligent visual waste-classification assistant.
 
-OBJECTIVE
 Analyze the uploaded image carefully and identify the single most likely visible waste item.
 
-ALLOWED CATEGORIES
-Choose exactly ONE:
+Choose exactly ONE category:
 Plastic, Paper, Glass, Metal, Organic, E-Waste, Hazardous, Textile, Other.
 
-VISUAL ANALYSIS RULES
-1. Base the decision only on what is visibly supported by the image.
-2. Do not invent, assume, or mention objects that are not visible.
+Rules:
+1. Base the decision only on visible evidence.
+2. Never invent objects that are not visible.
 3. If multiple waste objects are visible, select the single most prominent or clearly identifiable waste item.
-4. Classify the item according to its primary material or waste type.
-5. If the image is unclear or ambiguous, select the safest reasonable category and assign a lower confidence score.
+4. Classify according to the item's primary material or waste type.
+5. If the image is unclear or ambiguous, choose the safest reasonable category and give a lower confidence score.
 6. Do not assume recycling facilities exist everywhere.
-7. Disposal advice should acknowledge that local waste-management rules can vary.
-8. For hazardous or electronic waste, prioritize safe handling and authorized collection/recycling rather than ordinary household disposal.
-
-OUTPUT REQUIREMENTS
-Return ONLY valid JSON with exactly these fields:
-category, item, description, disposal, tip, confidence
-
-FIELD RULES
-- category: exactly one allowed category.
-- item: short, evidence-based name of the visible waste item.
-- description: concise explanation of what is visibly present.
-- disposal: practical, responsible and safe disposal guidance.
-- tip: exactly one useful environmental or recycling tip.
-- confidence: numerical value between 0 and 1.
-
-Never return markdown, code fences, or additional fields.
+7. Disposal guidance should acknowledge that local waste-management rules vary.
+8. For hazardous or electronic waste, recommend safe handling and authorized collection/recycling.
+9. Return exactly one category.
+10. Confidence must be between 0 and 1.
 """
-
-JSON_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "category": {"type": "string", "enum": CATEGORIES},
-        "item": {"type": "string"},
-        "description": {"type": "string"},
-        "disposal": {"type": "string"},
-        "tip": {"type": "string"},
-        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
-    },
-    "required": [
-        "category", "item", "description",
-        "disposal", "tip", "confidence"
-    ],
-    "additionalProperties": False,
-}
 
 def get_api_key():
     try:
@@ -85,8 +64,7 @@ def analyze_image(uploaded_file, model):
     api_key = get_api_key()
     if not api_key:
         raise RuntimeError(
-            "Gemini API key not found. Add GEMINI_API_KEY to Streamlit Secrets "
-            "or set it as an environment variable."
+            "Gemini API key not found. Add GEMINI_API_KEY to Streamlit Secrets."
         )
 
     client = genai.Client(api_key=api_key)
@@ -104,28 +82,25 @@ def analyze_image(uploaded_file, model):
         contents=[SYSTEM_PROMPT, image_part],
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
-            response_schema=JSON_SCHEMA,
+            response_schema=WasteResult,
             temperature=0.1,
         ),
     )
 
-    text = response.text.strip()
-    result = json.loads(text)
+    # Pydantic validation makes the response reliable and avoids the
+    # JSON-schema serialization problem in the previous version.
+    if getattr(response, "parsed", None) is not None:
+        result = response.parsed
+        if isinstance(result, WasteResult):
+            return result.model_dump()
 
-    if result["category"] not in CATEGORIES:
-        result["category"] = "Other"
-
-    result["confidence"] = max(
-        0.0, min(1.0, float(result["confidence"]))
-    )
-
-    return result
+    return WasteResult.model_validate_json(response.text).model_dump()
 
 st.markdown(
     """
-    <div style="text-align:center; padding:0.5rem 0 1rem;">
+    <div style="text-align:center;padding:.5rem 0 1rem;">
         <div style="font-size:3rem;">♻️</div>
-        <h1 style="margin-bottom:0.2rem;">WasteWise AI</h1>
+        <h1 style="margin-bottom:.2rem;">WasteWise AI</h1>
         <p style="font-size:1.05rem;">AI-powered visual waste classification</p>
     </div>
     """,
@@ -142,7 +117,7 @@ with st.sidebar:
     model = st.text_input(
         "Gemini model",
         value="gemini-3.8-flash",
-        help="Change this only if a different vision-capable Gemini model is available to your API project.",
+        help="Use a vision-capable Gemini model available to your API project.",
     )
     st.divider()
     st.caption("♻️ WasteWise AI")
@@ -150,7 +125,7 @@ with st.sidebar:
 
 uploaded = st.file_uploader(
     "📷 Upload a waste image",
-    type=["jpg", "jpeg", "png", "webp", "heic", "heif"],
+    type=["jpg", "jpeg", "png", "webp"],
     help="Use a clear image with the waste item visible.",
 )
 
@@ -194,7 +169,6 @@ if uploaded:
 
         with st.expander("View structured JSON"):
             st.json(result)
-
 else:
     st.markdown("### How it works")
     st.markdown(
@@ -205,6 +179,4 @@ else:
     )
 
 st.divider()
-st.caption(
-    "WasteWise AI provides general guidance. Local waste-management rules may differ."
-)
+st.caption("WasteWise AI provides general guidance. Local waste-management rules may differ.")
