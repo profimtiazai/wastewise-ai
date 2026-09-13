@@ -1,19 +1,22 @@
-# WasteWise AI — Gemini Fixed Edition
+# WasteWise AI v3 — Camera + Polished Interface
 
-This version fixes the Gemini `INVALID_ARGUMENT` error caused by the previous
-JSON schema serialization.
+WasteWise AI is an intelligent visual waste-classification assistant using Gemini's
+multimodal image understanding.
 
-## The problem that was fixed
+## What's new in v3
 
-The previous version passed a raw JSON-schema dictionary containing:
-
-`additionalProperties`
-
-through the Python SDK. With the installed SDK/API combination it was serialized
-as `additional_properties`, which Gemini rejected.
-
-This version uses a Pydantic `WasteResult` model directly as `response_schema`.
-This is the Google-recommended Python approach for structured output.
+- 📷 Direct camera capture with Streamlit `st.camera_input`
+- 🖼️ Image upload remains available
+- ✨ Cleaner, more professional interface
+- ♻️ Visual waste-assessment result cards
+- 📊 Human-readable confidence levels
+- 📝 Clear "What I See", disposal guidance, and eco tip
+- 🔄 Analyze Another Image button
+- 📱 More mobile-friendly layout
+- 🏷️ Supported waste categories section
+- ❌ Removed the unnecessary visible structured JSON output
+- ⚙️ Gemini model remains available under Advanced Settings
+- 🔐 Gemini API key continues to be read from Streamlit Secrets
 
 ## Streamlit Secrets
 
@@ -23,11 +26,11 @@ In Streamlit Cloud → App Settings → Secrets:
 GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
 ```
 
-Do not put the key in GitHub.
+Do not put the API key in GitHub.
 
 ## GitHub files
 
-Replace the files in your repository with:
+Replace your existing project files with:
 
 ```text
 app.py
@@ -37,8 +40,8 @@ WASTEWise_PROMPT.md
 .gitignore
 ```
 
-After pushing to GitHub, Streamlit Community Cloud should redeploy automatically.
-If it does not, use Reboot/Redeploy from the app management controls.
+Streamlit's `st.camera_input` returns an `UploadedFile`, so the captured image
+can use the same analysis pipeline as an uploaded file.
 
 ## Local run
 
@@ -49,3 +52,11 @@ pip install -r requirements.txt
 export GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 streamlit run app.py
 ```
+
+## Notes
+
+Camera access depends on the browser/device permission. On a phone, the browser
+will normally ask permission to use the camera the first time the camera widget
+is used.
+
+WasteWise AI provides general guidance. Local waste-management rules may differ.
