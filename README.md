@@ -1,18 +1,25 @@
-# ♻️ WasteWise AI
+# ♻️ WasteWise AI — Gemini Edition
 
-AI-powered visual waste classification app built with Streamlit and the OpenAI Responses API.
+An AI-powered visual waste-classification assistant built with Streamlit and the Google Gemini API.
 
 ## Features
-- Upload JPG, JPEG, PNG or WEBP images
-- Identifies the single most likely visible waste item
-- Uses exactly one of 9 predefined categories
-- Gives description, disposal guidance, one environmental tip and confidence score
-- Handles ambiguous images with lower confidence
-- Works locally and on Streamlit Community Cloud
 
-## Run locally
+- Upload JPG, JPEG, PNG, WEBP, HEIC or HEIF images
+- Gemini multimodal image analysis
+- Exactly one of 9 waste categories
+- Item identification
+- Description
+- Practical disposal guidance
+- Environmental tip
+- 0–1 confidence score
+- Structured JSON output
+- Ambiguous-image warning
+- Streamlit Community Cloud ready
 
-### 1. Create a virtual environment
+## 1. Run locally
+
+### Create virtual environment
+
 macOS/Linux:
 ```bash
 python3 -m venv .venv
@@ -25,41 +32,72 @@ python -m venv .venv
 .venv\Scripts\activate
 ```
 
-### 2. Install dependencies
+### Install packages
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Set your API key
+### Set Gemini API key
+
 macOS/Linux:
 ```bash
-export OPENAI_API_KEY="YOUR_API_KEY"
+export GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 ```
 
 Windows PowerShell:
 ```powershell
-$env:OPENAI_API_KEY="YOUR_API_KEY"
+$env:GEMINI_API_KEY="YOUR_GEMINI_API_KEY"
 ```
 
-### 4. Run
+### Start
+
 ```bash
 streamlit run app.py
 ```
 
-Open the local URL shown by Streamlit, normally http://localhost:8501
+Open the local URL displayed by Streamlit, normally:
+http://localhost:8501
 
-## Streamlit Community Cloud
+## 2. Deploy through GitHub + Streamlit Community Cloud
 
-1. Create a GitHub repository and upload `app.py` and `requirements.txt`.
-2. Go to https://share.streamlit.io/
-3. Sign in and connect GitHub.
-4. Choose **Create app**.
-5. Select your repository, branch (`main`) and `app.py`.
-6. Open **Advanced settings / Secrets**.
+1. Create a GitHub repository, for example `wastewise-ai`.
+2. Upload:
+   - `app.py`
+   - `requirements.txt`
+   - `README.md`
+   - `WASTEWise_PROMPT.md`
+   - `.gitignore`
+3. Go to Streamlit Community Cloud.
+4. Create/select your app.
+5. Choose your GitHub repository and `app.py`.
+6. Open the app's Settings → Secrets.
 7. Add:
-```toml
-OPENAI_API_KEY = "YOUR_API_KEY"
-```
-8. Deploy.
 
-Never commit your API key to GitHub.
+```toml
+GEMINI_API_KEY = "YOUR_GEMINI_API_KEY"
+```
+
+8. Save the secret and reboot/redeploy the app.
+
+IMPORTANT:
+- Never put your Gemini API key in GitHub.
+- Never put the key directly into `app.py`.
+- Never commit `.streamlit/secrets.toml`.
+
+## 3. Suggested GitHub structure
+
+```text
+wastewise-ai/
+├── app.py
+├── requirements.txt
+├── README.md
+├── WASTEWise_PROMPT.md
+└── .gitignore
+```
+
+## 4. AI model
+
+The application defaults to `gemini-3.8-flash`. The model can be changed from the Streamlit sidebar if your Google AI Studio/API project provides another compatible vision model.
+
+Gemini supports multimodal image understanding and structured JSON output.
